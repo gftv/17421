@@ -1,0 +1,133 @@
+import math
+
+'''精度计算，实现GB/T 17421.2'''
+class Acc():
+    
+    '''初始化函数，data源数据，结构为[[第一次采集的点值],[第二次采集的点值],……]；若为双向数据，奇数次为正向，偶数次为反向'''
+    def __init__(self,data=[]):    
+        self.Data(data)
+        
+    '''用于变更数据源'''
+    def Data(self,data):
+        self.data=data
+        self.RP=None
+        self.RN=None
+        self.dataP=None
+        self.dataN=None
+        self.ms=None
+        self.pp=None
+        self.pn=None
+        self.np=None
+        self.nn=None
+        self.b=None #反向间隙B
+        self.s=None #系统偏差S
+        self.r=None #重复定位R
+        self.m=None #均偏差M
+        self.a=None #定位精度
+        
+    '''计算各位置平均值，单向模式,data源数据，结构为[[第一次采集的点值],[第二次采集的点值],……]'''
+    def __Ave(self,data):
+        ave=[]
+        for i in range(len(data[0])):
+            s=0
+            for j in range(len(data)):
+                s+=data[j][i]
+            s/=len(data)
+            ave.append(s)
+        return ave
+
+    '''计算重复定位精度，单向模式,data源数据，结构为[[第一次采集的点值],[第二次采集的点值],……]'''
+    def __R(self,data):    
+        ave=self.__Ave(data)
+        r=[]
+        for i in range(len(data[0])):
+            st=0
+            for j in range(len(data)):
+                st+=(data[j][i]-ave[i])**2
+            if len(data)>1:
+                st/=(len(data)-1)
+            st=4*math.sqrt(st)
+            r.append(st)
+        return r
+    
+    '''计算重复定位精度，默认双向模式,mod=1双向，0单向'''
+    def R(self,mod=1):
+        if mod==1:
+            dataP=[]
+            dataN=[]
+            self.RA=[]
+            for i in range(len(self.data)):
+                if i%2==0:
+                    dataP.append(self.data[i])
+                else:
+                    dataN.append(self.data[i])
+            self.RP=self.__R(dataP)
+            self.RN=self.__R(dataN)
+        else:
+            self.RP=self.__R(self.data)
+        self.r=max(max(self.RP),max(self.RN))
+            
+
+    '''计算均偏差'''
+    def __M(self):
+        self.ms=self.__Ave(self.data)
+        self.m=max(self.ms)-min(self.ms)
+
+    '''计算系统偏差'''
+    def __S(self):
+        dataP=[]
+        dataN=[]
+        for i in range(len(self.data)):
+            if i%2==0:
+                dataP.append(self.data[i])
+            else:
+                dataN.append(self.data[i])
+        self.dataP=self.__Ave(dataP)
+        self.dataN=self.__Ave(dataN)
+        self.s=max(max(self.dataP),max(self.dataN))-min(min(self.dataP),min(self.dataN))
+
+    '''计算反向间隙'''
+    def __B(self):
+        self.__S()
+        bs=[]
+        for i in range(len(self.data[0])):
+            bs.append(abs(self.dataP[i]-self.dataN[i]))
+        self.b=max(bs)
+
+    '''计算定位精度，默认双向模式,mod=1双向，0单向'''
+    def A(self,mod=1):
+        self.__M()
+        if mod==1:
+            self.__B()
+        self.R(mod)
+        if mod==1:
+            self.pp=[]
+            self.pn=[]
+            self.np=[]
+            self.nn=[]
+            for i in range(len(self.data[0])):
+                self.pp.append(self.dataP[i]+self.RP[i]/2)
+                self.pn.append(self.dataP[i]-self.RP[i]/2)
+                self.np.append(self.dataN[i]+self.RN[i]/2)
+                self.nn.append(self.dataN[i]-self.RN[i]/2)
+            self.a=max(max(self.pp),max(self.np))-min(min(self.pn),min(self.nn))
+        else:
+            self.pp=[]
+            self.pn=[]
+            for i in range(len(self.data[0])):
+                self.pp.append(self.ms[i]+self.r[i]/2)
+                self.pn.append(self.ms[i]-self.r[i]/2)
+            self.a=max(self.pp)-min(self.pn)
+
+    def p(self):
+        print("重复定位精度R：",self.r)
+        print("反向间隙B：",self.b)
+        print("系统偏差S：",self.s)
+        print("均偏差M：",self.m)
+        print("定位精度A：",self.a)
+
+        
+t=[[1,2,3],[4,4,6],[2,2,5],[3,5,5]]
+aa=Acc(t)
+aa.A()
+aa.p()
