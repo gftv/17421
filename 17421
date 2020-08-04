@@ -126,4 +126,45 @@ class Acc():
         print("均偏差M：",self.m)
         print("定位精度A：",self.a)
 
+
+class Linear():
+
+    def __init__(self,data=[]):
+        self.Data(data)
         
+    def Data(self,data):
+        self.data=data
+        self.acc=None
+        self.value=None
+        
+    def __Linear(self,data):    #计算直线度
+        rang=data[-1]-data[0]   #首尾高差
+        step=rang/(len(data)-1) #单步高差
+        self.acc=[]                 
+        for i in range(len(data)):
+            self.acc.append(data[i]-i*step) #旋转计算拉平首尾
+        self.value=max(self.acc)-min(self.acc)  #计算直线度
+
+    def Linear(self,mod=1): #数据处理，模式1累加，即每一个点值都代表桥板的读数；模式0不累加，即认为每一个值都是绝对高度值，不需要预处理即可直接计算
+        if mod==1 and len(self.data)>1: #计算直线度至少要有三个点，故模式1下 self.data长度至少为2
+            data=[0]
+            for i in range(len(self.data)):
+                data.append(data[i]+self.data[i])   #每一个点的实际值都是前值+桥板测得值
+            self.__Linear(data)
+        elif mod==0 and len(self.data)>2:   #原理同模式1判断
+            self.__Linear(self.data)
+            
+
+    def Draw(self): #用于绘图
+        import matplotlib.pyplot as plt
+        if self.acc==None:  #如果之前没有进行数据处理
+            self.Linear()   #进行数据处理，默认模式
+        if self.acc!=None:  #有计算结果进行绘图
+            fig=plt.Figure()
+            ax=plt.subplot(111)
+            x=[i for i in range(len(self.acc))]
+            plt.plot(x,self.acc)
+            plt.show()
+
+    def V(self):
+        print(self.value)
